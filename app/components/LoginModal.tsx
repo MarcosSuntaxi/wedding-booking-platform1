@@ -1,10 +1,11 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/components/ui/dialog"
+import { Button } from "@/app/components/ui/button"
+import { Input } from "@/app/components/ui/input"
+import { Label } from "@/app/components/ui/label"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -12,31 +13,44 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const router = useRouter()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    setError("")
+    setIsLoading(true)
+
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       })
+
       const data = await response.json()
+
       if (response.ok) {
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
+        // Guardar el token y la información del usuario
+        localStorage.setItem("token", data.token)
+        localStorage.setItem("user", JSON.stringify(data.user))
+
+        // Cerrar el modal
         onClose()
-        // Aquí puedes añadir lógica adicional, como redireccionar al usuario o actualizar el estado global
+
+        // Redireccionar al dashboard
+        router.push("/dashboard")
       } else {
-        setError(data.error || 'Error al iniciar sesión')
+        setError(data.error || data.message || "Error al iniciar sesión")
       }
     } catch (error) {
-      console.error('Error:', error)
-      setError('Error al conectar con el servidor')
+      console.error("Error:", error)
+      setError("Error al conectar con el servidor")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -55,6 +69,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -65,10 +80,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={isLoading}
             />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <Button type="submit" className="w-full">Iniciar sesión</Button>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
